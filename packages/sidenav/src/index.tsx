@@ -1,11 +1,16 @@
 /** @jsx jsx */
-import { jsx, css, ThemeProvider } from 'theme-ui'
-import { MDXProvider } from '@mdx-js/react'
+import { jsx, ThemeProvider } from '@theme-ui/core'
+// import { css } from '@theme-ui/css'
+import { MDXProvider, MDXProviderComponentsProp } from '@mdx-js/react'
 import React, { useState } from 'react'
 import { Global } from '@emotion/core'
 import merge from 'deepmerge'
 
-const Overlay = ({ onClick }) => (
+interface OverlayProps {
+  onClick?: () => void
+}
+
+const Overlay: React.FC<OverlayProps> = ({ onClick }) => (
   <React.Fragment>
     <div
       onClick={onClick}
@@ -18,45 +23,68 @@ const Overlay = ({ onClick }) => (
       }}
     />
     <Global
-      styles={css({
+      styles={{
+        // styles={css({
         body: {
           overflow: ['hidden', 'auto'],
         },
-      })}
+        // })}
+      }}
     />
   </React.Fragment>
 )
 
-const createNestedLinks = (children, depth = 0) => {
-  const links = React.Children.toArray(children).reduce((acc, child) => {
-    const type = child.props && child.props.mdxType
-    if (!child.props || !child.props.children) return acc
-    if (type === 'a') return [...acc, child]
-    if (depth > 0 && type === 'ul') {
-      const last = acc[acc.length - 1]
-      acc[acc.length - 1] = React.cloneElement(last, {
-        links: createNestedLinks(child.props.children),
-      })
-      return acc
-    }
-    return [...acc, ...createNestedLinks(child.props.children, depth + 1)]
-  }, [])
+const createNestedLinks = <T extends any>(
+  children: React.ReactNode,
+  depth = 0
+) => {
+  const links = React.Children.toArray(children).reduce(
+    (acc: React.ReactNodeArray, child: React.ReactElement<T>) => {
+      const type = child.props && child.props.mdxType
+      if (!child.props || !child.props.children) return acc
+      if (type === 'a') return [...acc, child]
+      if (depth > 0 && type === 'ul') {
+        const last = acc[acc.length - 1]
+        acc[acc.length - 1] = React.cloneElement(last as any, {
+          links: createNestedLinks(child.props.children),
+        })
+        return acc
+      }
+      return [
+        ...acc,
+        ...(createNestedLinks(child.props.children, depth + 1) as any),
+      ]
+    },
+    []
+  ) as React.ReactElement<T>[]
   return links
 }
 
-const flattenLinks = children =>
-  React.Children.toArray(children).reduce((acc, child) => {
-    if (child.props && child.props.mdxType === 'a') {
-      return [...acc, child]
-    }
-    if (!child.props || !child.props.children) return acc
-    return React.Children.toArray([
-      ...acc,
-      ...flattenLinks(child.props.children),
-    ])
-  }, [])
+const flattenLinks = <T extends any>(children: React.ReactNode) =>
+  React.Children.toArray(children).reduce(
+    (
+      acc: React.ReactNodeArray,
+      child: React.ReactElement<T>
+    ): React.ReactNodeArray => {
+      if (child.props && child.props.mdxType === 'a') {
+        return [...acc, child]
+      }
+      if (!child.props || !child.props.children) return acc
+      return React.Children.toArray([
+        ...acc,
+        ...(flattenLinks(child.props.children) as any),
+      ])
+    },
+    []
+  ) as React.ReactElement<T>[]
 
-export const Sidenav = React.forwardRef(
+interface SideNavProps {
+  open: boolean
+  styles: any
+  components: MDXProviderComponentsProp
+}
+
+export const Sidenav = React.forwardRef<HTMLDivElement, SideNavProps>(
   ({ open, styles = {}, components, ...props }, ref) => {
     return (
       <ThemeProvider
@@ -159,9 +187,27 @@ export const AccordionButton = props => {
   )
 }
 
-const NavLinks = ({ open, pathname = '', links, href, Link, ...props }) => {
-  if (!links) return false
-  if (!open && !pathname.includes(href)) return false
+interface NavLinksProps {
+  open: boolean
+  pathname: string
+  href: string
+  links: React.ReactComponentElement<
+    'a',
+    { href: string; className: string; children: React.ReactNode }
+  >[]
+  Link: React.ElementType
+}
+
+const NavLinks: React.FC<NavLinksProps> = ({
+  open,
+  pathname = '',
+  links,
+  href,
+  Link,
+  ...props
+}) => {
+  if (!links) return null
+  if (!open && !pathname.includes(href)) return null
 
   return (
     <ul
@@ -186,12 +232,31 @@ const NavLinks = ({ open, pathname = '', links, href, Link, ...props }) => {
   )
 }
 
-export const AccordionNav = React.forwardRef(
+interface AccordionNavProps {
+  open: boolean
+  components?: { a: React.ElementType }
+  className: string
+  pathname: string
+  children: React.ReactNode | Element
+}
+
+export const AccordionNav: React.FC<AccordionNavProps> = React.forwardRef<
+  HTMLDivElement,
+  AccordionNavProps
+>(
   (
     { open, children, components = {}, className, pathname = '', ...props },
     ref
   ) => {
-    const links = createNestedLinks(children)
+    const links = createNestedLinks<{
+      href: string
+      children?: React.ReactNode
+      className: string
+      links: React.ReactComponentElement<
+        'a',
+        { href: string; className: string; children: React.ReactNode }
+      >[]
+    }>(children)
     const [expanded, setExpanded] = useState({})
     const Link = components.a || 'a'
 
@@ -270,7 +335,8 @@ export const AccordionNav = React.forwardRef(
   }
 )
 
-const removeSlash = str => (str.length > 1 ? str.replace(/\/$/, '') : str)
+const removeSlash = (str: string) =>
+  str.length > 1 ? str.replace(/\/$/, '') : str
 
 const PaginationLink = ({
   label,
@@ -299,7 +365,14 @@ const PaginationLink = ({
 )
 
 export const Pagination = ({ pathname = '', children, ...props }) => {
-  const links = flattenLinks(children)
+  const links = flattenLinks<{
+    href: string
+    label: string
+    children: React.ReactNode
+    mdxType: string
+    originalType: string
+    parentName: string
+  }>(children)
   const index = links.findIndex(
     link => link.props.href === removeSlash(pathname)
   )

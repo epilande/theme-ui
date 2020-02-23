@@ -1,7 +1,7 @@
 /** @jsx jsx */
 import { jsx } from 'theme-ui'
 import renderer from 'react-test-renderer'
-import { render, fireEvent, cleanup } from '@testing-library/react'
+import { render, cleanup } from '@testing-library/react'
 import { Sidenav, Pagination, AccordionNav } from '../src'
 
 afterEach(cleanup)

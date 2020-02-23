@@ -5,8 +5,8 @@
   "module": "dist/index.esm.js",
   "license": "MIT",
   "scripts": {
-    "prepare": "microbundle --no-compress",
-    "watch": "microbundle watch --no-compress"
+    "prepare": "microbundle --jsx react --no-compress --tsconfig tsconfig.json",
+    "watch": "microbundle watch --jsx react --no-compress --tsconfig tsconfig.json"
   },
   "publishConfig": {
     "access": "public"
@@ -16,8 +16,11 @@
     "@mdx-js/react": "^1.0.21",
     "deepmerge": "^4.0.0",
     "react": "^16.8.6",
-    "theme-ui": "^0.3.1"
+    "@theme-ui/core": "^0.3.1",
+    "@theme-ui/css": "^0.3.1"
   },
+  "source": "src/index.tsx",
+  "types": "dist/index.d.ts",
   "keywords": [
     "theme-ui",
     "mdx",
